@@ -51,7 +51,7 @@ func NewComponent(name string) *Component {
 }
 
 func (c *Component) AddProperty(name, value string, params map[string]string) {
-	c.Properties[name] = &Property{Name: name, Value: value, Params: params}
+	c.Properties[name] = newProperty(name, value, params)
 }
 
 func (c *Component) AddComponent(comp *Component) {
@@ -92,14 +92,14 @@ func (p *Property) String() string {
 		str = fmt.Sprintf("%s:%s", str, p.Value)
 	}
 
-	// TODO: fold long text
+	// TODO: fold long property text
 	return str
 }
 
-func newProperty(name, value string) *Property {
+func newProperty(name, value string, params map[string]string) *Property {
 	return &Property{
 		Name:   name,
 		Value:  value,
-		Params: make(map[string]string),
+		Params: params,
 	}
 }
