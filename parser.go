@@ -75,7 +75,7 @@ func Parse(r io.Reader) (*Calendar, error) {
 			return &Calendar{*v}, nil
 		}
 	}
-	return nil, fmt.Errorf("Could not found \"VCALENDAR\" component")
+	return nil, fmt.Errorf("Could not find \"VCALENDAR\" component")
 }
 
 func (p *Parser) peek() (string, error) {
