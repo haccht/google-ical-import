@@ -46,7 +46,7 @@ func Parse(r io.Reader) (*Calendar, error) {
 		key := params[0]
 		val := keyval[1]
 
-		prop := newProperty(key, val)
+		prop := newProperty(key, val, nil)
 		for _, param := range params[1:] {
 			kv := strings.SplitN(param, "=", 2)
 			prop.Params[kv[0]] = kv[1]

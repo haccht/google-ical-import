@@ -97,6 +97,10 @@ func (p *Property) String() string {
 }
 
 func newProperty(name, value string, params map[string]string) *Property {
+	if params == nil {
+		params = make(map[string]string)
+	}
+
 	return &Property{
 		Name:   name,
 		Value:  value,

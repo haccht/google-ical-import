@@ -1,23 +1,15 @@
 package main
 
 import (
-	"context"
-	"encoding/gob"
-	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
 )
 
@@ -42,19 +34,14 @@ func main() {
 		log.Fatalf("Unable to parse ics file: %v", err)
 	}
 
-	client, err := newOAuthClient()
+	c, err := getCalendarService()
 	if err != nil {
-		log.Fatalf("Unable to create api client: %v", err)
-	}
-
-	c, err := calendar.New(client)
-	if err != nil {
-		log.Fatalf("Unable to create calendar service: %v", err)
+		log.Fatalf("Unable to get calendar: %v", err)
 	}
 
 	id, err := getCalendarID(c)
 	if err != nil {
-		log.Fatalf("Unable to get calendar: %v", err)
+		log.Fatalf("Unable to specify calendar: %v", err)
 	}
 	fmt.Printf("Import events into Google Calendar: %s\n", id)
 
@@ -140,98 +127,4 @@ func newEventDateTime(prop *Property, tz *time.Location) (*calendar.EventDateTim
 	}
 
 	return nil, fmt.Errorf("Unsupported datetime format: %v", value)
-}
-
-func getCalendarID(c *calendar.Service) (string, error) {
-	if *calendarId != "" {
-		return *calendarId, nil
-	}
-
-	calendars, err := c.CalendarList.List().Fields("items/id").Do()
-	if err != nil {
-		return "", fmt.Errorf("Unable to retrieve list of calendars: %v", err)
-	}
-
-	for i, v := range calendars.Items {
-		fmt.Printf("%d:  %v\n", i, v.Id)
-	}
-	fmt.Printf("Calendar to import: ")
-
-	var index int
-	if _, err := fmt.Scan(&index); err != nil {
-		return "", fmt.Errorf("Invalid input: %v", err)
-	}
-
-	return calendars.Items[index].Id, nil
-}
-
-func newOAuthClient() (*http.Client, error) {
-	cwd, _ := os.Getwd()
-
-	clientSecret, err := ioutil.ReadFile(filepath.Join(cwd, secretFile))
-	if err != nil {
-		return nil, fmt.Errorf("Unable to read client secret file: %v", err)
-	}
-
-	config, err := google.ConfigFromJSON([]byte(clientSecret), calendar.CalendarScope)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse client secret file into config: %v", err)
-	}
-	cachePath := filepath.Join(cwd, "credentials")
-
-	token, err := tokenFromFile(cachePath)
-	if err != nil {
-		token, err = tokenFromWeb(config)
-		if err != nil {
-			return nil, err
-		}
-
-		saveToken(cachePath, token)
-	}
-
-	ctx := context.Background()
-	return config.Client(ctx, token), nil
-}
-
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	if !*cacheToken {
-		return nil, errors.New("--cachetoken is false")
-	}
-
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-
-	t := new(oauth2.Token)
-	err = gob.NewDecoder(f).Decode(t)
-	return t, err
-}
-
-func tokenFromWeb(config *oauth2.Config) (*oauth2.Token, error) {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Retrieve your authorization code using: %v\nCode: ", authURL)
-
-	var code string
-	if _, err := fmt.Scan(&code); err != nil {
-		return nil, fmt.Errorf("Unable to read authorization code: %v", err)
-	}
-
-	token, err := config.Exchange(oauth2.NoContext, code)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve token from web: %v", err)
-	}
-
-	return token, nil
-}
-
-func saveToken(file string, token *oauth2.Token) {
-	f, err := os.Create(file)
-	if err != nil {
-		log.Printf("Warning: failed to cache oauth token: %v", err)
-		return
-	}
-	defer f.Close()
-
-	gob.NewEncoder(f).Encode(token)
 }
