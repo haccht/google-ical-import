@@ -12,47 +12,9 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	calendar "google.golang.org/api/calendar/v3"
 )
 
-func getCalendarService() (*calendar.Service, error) {
-	client, err := newOAuthClient()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to create api client: %v", err)
-	}
-
-	service, err := calendar.New(client)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to create calendar service: %v", err)
-	}
-
-	return service, nil
-}
-
-func getCalendarID(c *calendar.Service) (string, error) {
-	if *calendarId != "" {
-		return *calendarId, nil
-	}
-
-	calendars, err := c.CalendarList.List().Fields("items/id").Do()
-	if err != nil {
-		return "", fmt.Errorf("Unable to retrieve list of calendars: %v", err)
-	}
-
-	for i, v := range calendars.Items {
-		fmt.Printf("%d:  %v\n", i, v.Id)
-	}
-	fmt.Printf("Calendar to import: ")
-
-	var index int
-	if _, err := fmt.Scan(&index); err != nil {
-		return "", fmt.Errorf("Invalid input: %v", err)
-	}
-
-	return calendars.Items[index].Id, nil
-}
-
-func newOAuthClient() (*http.Client, error) {
+func newOAuthClient(scope string) (*http.Client, error) {
 	cwd, _ := os.Getwd()
 
 	clientSecret, err := ioutil.ReadFile(filepath.Join(cwd, secretFile))
@@ -60,7 +22,7 @@ func newOAuthClient() (*http.Client, error) {
 		return nil, fmt.Errorf("Unable to read client secret file: %v", err)
 	}
 
-	config, err := google.ConfigFromJSON([]byte(clientSecret), calendar.CalendarScope)
+	config, err := google.ConfigFromJSON([]byte(clientSecret), scope)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse client secret file into config: %v", err)
 	}

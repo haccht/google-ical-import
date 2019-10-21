@@ -65,6 +65,43 @@ func main() {
 	}
 }
 
+func getCalendarService() (*calendar.Service, error) {
+	client, err := newOAuthClient(calendar.CalendarScope)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create api client: %v", err)
+	}
+
+	service, err := calendar.New(client)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create calendar service: %v", err)
+	}
+
+	return service, nil
+}
+
+func getCalendarID(c *calendar.Service) (string, error) {
+	if *calendarId != "" {
+		return *calendarId, nil
+	}
+
+	calendars, err := c.CalendarList.List().Fields("items/id").Do()
+	if err != nil {
+		return "", fmt.Errorf("Unable to retrieve list of calendars: %v", err)
+	}
+
+	for i, v := range calendars.Items {
+		fmt.Printf("%d:  %v\n", i, v.Id)
+	}
+	fmt.Printf("Calendar to import: ")
+
+	var index int
+	if _, err := fmt.Scan(&index); err != nil {
+		return "", fmt.Errorf("Invalid input: %v", err)
+	}
+
+	return calendars.Items[index].Id, nil
+}
+
 func newEvent(e *Event) (*calendar.Event, error) {
 	ev := new(calendar.Event)
 	tz, _ := time.LoadLocation(timezone)
